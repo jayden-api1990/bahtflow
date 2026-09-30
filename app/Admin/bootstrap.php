@@ -1,0 +1,60 @@
+<?php
+
+use Dcat\Admin\Admin;
+use Dcat\Admin\Grid;
+use Dcat\Admin\Form;
+use Dcat\Admin\Grid\Filter;
+use Dcat\Admin\Show;
+
+/**
+ * Dcatplsu-admin - admin builder based on Laravel.
+ * @author 杨光 <https://github.com/ycookies/dcat-plus-admin>
+ *
+ * Bootstraper for Admin.
+ *
+ * Here you can remove builtin form field:
+ *
+ * extend custom field:
+ * Dcat\Admin\Form::extend('php', PHPEditor::class);
+ * Dcat\Admin\Grid\Column::extend('php', PHPEditor::class);
+ * Dcat\Admin\Grid\Filter::extend('php', PHPEditor::class);
+ *
+ * Or require js and css assets:
+ * Admin::css('/packages/prettydocs/css/styles.css');
+ * Admin::js('/packages/prettydocs/js/main.js');
+ *
+ */
+Admin::style('.main-footer { display: none !important; }');
+
+Admin::style(<<<'CSS'
+table.data-table tbody td,
+.table tbody td {
+    font-size: 0.9rem !important;
+}
+CSS);
+
+// 可以把注释去掉,自定义全局的 Grid、Show 和 Form 逻辑
+// // 统一全局定义数据表格
+Grid::resolving(function (Grid $grid) {
+    $grid->disableRowSelector();
+    $grid->tableCollapse(false); //表格布局样式
+    $grid->filter(function (Grid\Filter $filter) {
+        $filter->panel();  // 更改为 panel 布局
+        $filter->expand(false); // 展开过滤器
+    }); 
+});
+// // 统一全局定义表单
+Form::resolving(function (Form $form) {
+     $form->disableEditingCheck();
+     $form->disableCreatingCheck();
+     $form->disableViewCheck();
+     $form->tools(function (Form\Tools $tools) {
+          $tools->disableDelete();
+          $tools->disableView();
+          $tools->disableList();
+     });
+});
+// // 统一全局定义详情页
+Show::resolving(function (Show $show) {
+     $show->disableListButton();
+});
