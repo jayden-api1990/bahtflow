@@ -1,13 +1,14 @@
 <?php
 
 use Dcat\Admin\Admin;
-use Dcat\Admin\Grid;
 use Dcat\Admin\Form;
+use Dcat\Admin\Grid;
 use Dcat\Admin\Grid\Filter;
 use Dcat\Admin\Show;
 
 /**
  * Dcatplsu-admin - admin builder based on Laravel.
+ *
  * @author 杨光 <https://github.com/ycookies/dcat-plus-admin>
  *
  * Bootstraper for Admin.
@@ -22,9 +23,20 @@ use Dcat\Admin\Show;
  * Or require js and css assets:
  * Admin::css('/packages/prettydocs/css/styles.css');
  * Admin::js('/packages/prettydocs/js/main.js');
- *
  */
+$allowedLocales = ['zh_CN', 'en', 'zh_TW'];
+try {
+    $layoutLocale = admin_setting_group('layout_config')['locale'] ?? null;
+    if (is_string($layoutLocale) && in_array($layoutLocale, $allowedLocales, true)) {
+        app()->setLocale($layoutLocale);
+    }
+} catch (Throwable) {
+    // ignore setting store errors during bootstrap
+}
+
 Admin::style('.main-footer { display: none !important; }');
+Admin::style('.dark-mode-switcher { display: none !important; }');
+Admin::style('.lc-clear-cache-btn { display: none !important; }');
 
 Admin::style(<<<'CSS'
 table.data-table tbody td,
@@ -37,24 +49,24 @@ CSS);
 // // 统一全局定义数据表格
 Grid::resolving(function (Grid $grid) {
     $grid->disableRowSelector();
-    $grid->tableCollapse(false); //表格布局样式
-    $grid->filter(function (Grid\Filter $filter) {
+    $grid->tableCollapse(false); // 表格布局样式
+    $grid->filter(function (Filter $filter) {
         $filter->panel();  // 更改为 panel 布局
         $filter->expand(false); // 展开过滤器
-    }); 
+    });
 });
 // // 统一全局定义表单
 Form::resolving(function (Form $form) {
-     $form->disableEditingCheck();
-     $form->disableCreatingCheck();
-     $form->disableViewCheck();
-     $form->tools(function (Form\Tools $tools) {
-          $tools->disableDelete();
-          $tools->disableView();
-          $tools->disableList();
-     });
+    $form->disableEditingCheck();
+    $form->disableCreatingCheck();
+    $form->disableViewCheck();
+    $form->tools(function (Form\Tools $tools) {
+        $tools->disableDelete();
+        $tools->disableView();
+        $tools->disableList();
+    });
 });
 // // 统一全局定义详情页
 Show::resolving(function (Show $show) {
-     $show->disableListButton();
+    $show->disableListButton();
 });

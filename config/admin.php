@@ -1,5 +1,21 @@
 <?php
 
+use App\Admin\Controllers\AuthController;
+use App\Models\AdminUser;
+use Dcat\Admin\Exception\Handler;
+use Dcat\Admin\Grid\Actions\Delete;
+use Dcat\Admin\Grid\Actions\Edit;
+use Dcat\Admin\Grid\Actions\QuickEdit;
+use Dcat\Admin\Grid\Actions\Show;
+use Dcat\Admin\Grid\ColumnSelector\SessionStore;
+use Dcat\Admin\Grid\Displayers\DropdownActions;
+use Dcat\Admin\Grid\Tools\BatchActions;
+use Dcat\Admin\Grid\Tools\BatchDelete;
+use Dcat\Admin\Grid\Tools\Paginator;
+use Dcat\Admin\Models\Menu;
+use Dcat\Admin\Models\Permission;
+use Dcat\Admin\Models\Role;
+
 return [
 
     /*
@@ -139,13 +155,13 @@ return [
     'auth' => [
         'enable' => true,
 
-        'controller' => App\Admin\Controllers\AuthController::class,
+        'controller' => AuthController::class,
 
         'guard' => 'admin',
 
         'guards' => [
             'admin' => [
-                'driver'   => 'session',
+                'driver' => 'session',
                 'provider' => 'admin',
             ],
         ],
@@ -153,7 +169,7 @@ return [
         'providers' => [
             'admin' => [
                 'driver' => 'eloquent',
-                'model'  => App\Models\AdminUser::class,
+                'model' => AdminUser::class,
             ],
         ],
 
@@ -165,6 +181,7 @@ return [
         'except' => [
             'auth/login',
             'auth/logout',
+            'auth/locale',
         ],
 
         'enable_session_middleware' => false,
@@ -178,25 +195,25 @@ return [
     'grid' => [
 
         // The global Grid action display class.
-        'grid_action_class' => Dcat\Admin\Grid\Displayers\DropdownActions::class,
+        'grid_action_class' => DropdownActions::class,
 
         // The global Grid batch action display class.
-        'batch_action_class' => Dcat\Admin\Grid\Tools\BatchActions::class,
+        'batch_action_class' => BatchActions::class,
 
         // The global Grid pagination display class.
-        'paginator_class' => Dcat\Admin\Grid\Tools\Paginator::class,
+        'paginator_class' => Paginator::class,
 
         'actions' => [
-            'view' => Dcat\Admin\Grid\Actions\Show::class,
-            'edit' => Dcat\Admin\Grid\Actions\Edit::class,
-            'quick_edit' => Dcat\Admin\Grid\Actions\QuickEdit::class,
-            'delete' => Dcat\Admin\Grid\Actions\Delete::class,
-            'batch_delete' => Dcat\Admin\Grid\Tools\BatchDelete::class,
+            'view' => Show::class,
+            'edit' => Edit::class,
+            'quick_edit' => QuickEdit::class,
+            'delete' => Delete::class,
+            'batch_delete' => BatchDelete::class,
         ],
 
         // The global Grid column selector setting.
         'column_selector' => [
-            'store' => Dcat\Admin\Grid\ColumnSelector\SessionStore::class,
+            'store' => SessionStore::class,
             'store_params' => [
                 'driver' => 'file',
             ],
@@ -230,6 +247,7 @@ return [
             '/',
             'auth/login',
             'auth/logout',
+            'auth/locale',
             'auth/setting',
         ],
     ],
@@ -244,7 +262,7 @@ return [
         'cache' => [
             // enable cache or not
             'enable' => false,
-            'store'  => 'file',
+            'store' => 'file',
         ],
 
         // Whether enable menu bind to a permission.
@@ -276,7 +294,7 @@ return [
         // Image and file upload path under the disk above.
         'directory' => [
             'image' => 'images',
-            'file'  => 'files',
+            'file' => 'files',
         ],
 
     ],
@@ -316,7 +334,7 @@ return [
             // Directory for video uploads.
             'video' => 'ueditor/videos',
             // Directory for attachment uploads.
-            'file'  => 'ueditor/files',
+            'file' => 'ueditor/files',
         ],
 
         // Image URL prefix; keep empty when the upload controller returns absolute URLs.
@@ -325,17 +343,17 @@ return [
         // Whether to load upload actions, field names, limits, and allow lists from the server.
         'load_config_from_server' => true,
         // Initial editor height in pixels.
-        'initial_frame_height'    => 400,
+        'initial_frame_height' => 400,
         // Whether to display the element path at the bottom of the editor.
-        'element_path_enabled'    => false,
+        'element_path_enabled' => false,
         // Whether to grow the editor height as content is added.
-        'auto_height_enabled'     => true,
+        'auto_height_enabled' => true,
         // Whether to enable AI tools; disabled by default to prevent third-party data disclosure.
-        'enable_ai'               => false,
+        'enable_ai' => false,
         // Whether to use bundled emoticons instead of the default third-party HTTP endpoint.
-        'emotion_localization'    => true,
+        'emotion_localization' => true,
         // Whether to follow Dcat dark mode for the editor, editing iframe, and dialogs.
-        'dark_mode'               => true,
+        'dark_mode' => true,
 
         // Toolbar layout. Remove button names or add supported UEditor buttons; "|" is a separator.
         'toolbars' => [
@@ -360,7 +378,7 @@ return [
         // Image upload rules.
         'image' => [
             // Maximum allowed image size in bytes.
-            'max_size'   => 2048000,
+            'max_size' => 2048000,
             // Allowed image file extensions.
             'allow_files' => ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'],
             // Allowed image MIME types; an empty array disables MIME validation.
@@ -370,7 +388,7 @@ return [
         // Video upload rules.
         'video' => [
             // Maximum allowed video size in bytes.
-            'max_size'   => 102400000,
+            'max_size' => 102400000,
             // Allowed video file extensions.
             'allow_files' => ['.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv', '.webm', '.m4v'],
             // Allowed video MIME types; an empty array disables MIME validation.
@@ -380,7 +398,7 @@ return [
         // Attachment upload rules.
         'file' => [
             // Maximum allowed attachment size in bytes.
-            'max_size'   => 51200000,
+            'max_size' => 51200000,
             // Allowed attachment file extensions.
             'allow_files' => [
                 '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.pdf',
@@ -407,27 +425,27 @@ return [
 
         // User tables and model.
         'users_table' => 'admin_users',
-        'users_model' => App\Models\AdminUser::class,
+        'users_model' => AdminUser::class,
 
         // Role table and model.
         'roles_table' => 'admin_roles',
-        'roles_model' => Dcat\Admin\Models\Role::class,
+        'roles_model' => Role::class,
 
         // Permission table and model.
         'permissions_table' => 'admin_permissions',
-        'permissions_model' => Dcat\Admin\Models\Permission::class,
+        'permissions_model' => Permission::class,
 
         // Menu table and model.
         'menu_table' => 'admin_menu',
-        'menu_model' => Dcat\Admin\Models\Menu::class,
+        'menu_model' => Menu::class,
 
         // Pivot table for table above.
-        'role_users_table'       => 'admin_role_users',
+        'role_users_table' => 'admin_role_users',
         'role_permissions_table' => 'admin_role_permissions',
-        'role_menu_table'        => 'admin_role_menu',
-        'permission_menu_table'  => 'admin_permission_menu',
-        'settings_table'         => 'admin_settings',
-        'extensions_table'       => 'admin_extensions',
+        'role_menu_table' => 'admin_role_menu',
+        'permission_menu_table' => 'admin_permission_menu',
+        'settings_table' => 'admin_settings',
+        'extensions_table' => 'admin_extensions',
         'extension_histories_table' => 'admin_extension_histories',
     ],
 
@@ -459,11 +477,16 @@ return [
 
         'full_screen' => true, // 是否展示全屏按钮
 
-        'home_url'=> env('APP_URL'), // 是否展示官网url
+        'home_url' => '', // 是否展示官网url
 
-        'layout_config_tool_in_navbar' => true, // 是否将布局配置工具放置在导航栏（默认放置在侧边栏）
+        //'layout_config_tool_in_navbar' => true, // 是否将布局配置工具放置在导航栏（默认放置在侧边栏）
+
+        // 导航栏语言切换（中文 / English）；也可在布局配置面板中调整
+        'show_locale_switch' => true,
+
+        'locale' => env('APP_LOCALE', 'zh_CN'),
     ],
-    
+
     'iframe_tab' => [
         /*
         |--------------------------------------------------------------------------
@@ -496,7 +519,7 @@ return [
         'dialog_area_width' => env('ADMIN_IFRAME_TAB_DIALOG_AREA_WIDTH', '70%'),
 
         'dialog_area_height' => env('ADMIN_IFRAME_TAB_DIALOG_AREA_HEIGHT', '90vh'),
-        
+
         'asset_version' => env('ADMIN_IFRAME_TAB_ASSET_VERSION', '1.0.0'),
     ],
 
@@ -506,7 +529,7 @@ return [
     |--------------------------------------------------------------------------
     |
     */
-    'exception_handler' => Dcat\Admin\Exception\Handler::class,
+    'exception_handler' => Handler::class,
 
     /*
     |--------------------------------------------------------------------------
@@ -549,7 +572,7 @@ return [
     | 多应用
     |--------------------------------------------------------------------------
     */
-    'multi_app'                 => [
+    'multi_app' => [
         // 'seller'    => true,
         // 'reseller'  => true,
         // 'brand'     => true,

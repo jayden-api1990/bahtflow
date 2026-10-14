@@ -61,6 +61,7 @@ return [
     'password_confirmation' => '確認密碼',
     'old_password_error'    => '舊密碼輸入錯誤',
     'remember_me'           => '記住我',
+    'locale'                => '語言',
     'user_setting'          => '用戶設置',
     'avatar'                => '頭像',
     'list'                  => '列表',

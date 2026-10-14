@@ -62,6 +62,7 @@ return [
     'password_confirmation' => '确认密码',
     'old_password_error'    => '请输入正确的旧密码',
     'remember_me'           => '记住我',
+    'locale'                => '语言',
     'user_setting'          => '用户设置',
     'avatar'                => '头像',
     'list'                  => '列表',

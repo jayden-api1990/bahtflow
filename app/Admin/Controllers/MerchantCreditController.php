@@ -83,7 +83,7 @@ class MerchantCreditController extends AdminController
             $this->applyMerchantScope($grid->model());
             $grid->model()->with('merchant')->orderByDesc('id');
 
-            $grid->column('id')->sortable();
+            //$grid->column('id')->sortable();
             $grid->column('merchant.name', admin_trans_field('merchant_id'));
             $grid->column('credit_balance')->sortable();
             $grid->column('created_at')->display(fn ($value) => self::formatDateTime($value))->sortable();
@@ -109,7 +109,7 @@ class MerchantCreditController extends AdminController
             });
 
             $grid->filter(function (Grid\Filter $filter) use ($isAdministratorUser): void {
-                $filter->equal('id');
+                //$filter->equal('id');
 
                 if ($isAdministratorUser) {
                     $filter->equal('merchant_id')->select(

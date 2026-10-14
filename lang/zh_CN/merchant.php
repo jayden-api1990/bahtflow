@@ -11,6 +11,8 @@ return [
         'status' => '状态',
         'callback_url' => '回调地址',
         'currency' => '货币',
+        'deposit_fee' => '存款手续费',
+        'withdraw_fee' => '取款手续费',
         'admin_id' => '管理员',
         'admin_users_count' => '管理员数',
     ],

@@ -4,10 +4,11 @@ namespace App\Services;
 
 use App\Models\Merchant;
 use App\Models\MerchantCredit;
+use App\Models\PaymentApiLog;
 use App\Models\PaymentOrder;
+use App\Services\Merchant\MerchantCallbackNotifier;
 use App\Services\PaymentGateway\JinlipayClient;
 use App\Services\PaymentGateway\JinlipayException;
-use App\Services\Merchant\MerchantCallbackNotifier;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -17,6 +18,7 @@ class MerchantPaymentService
         private readonly JinlipayClient $client,
         private readonly MerchantCreditAdjustmentService $credit,
         private readonly MerchantCallbackNotifier $notifier,
+        private readonly PaymentApiLogger $apiLogs,
     ) {}
 
     /**
@@ -29,43 +31,39 @@ class MerchantPaymentService
         $callbackUrl = $this->resolveCallbackUrl($merchant, $input['callbackUrl'] ?? null);
         $amount = $this->client->canonicalAmount($input['amount']);
 
+        $fee = $this->percentFee($amount, $merchant->deposit_fee);
+        $merchantOrderNo = (string) $input['merchantOrderNo'];
+        $this->assertOrderAvailable($merchant, $merchantOrderNo);
+
+        $upstream = $this->client->createDeposit([
+            'amount' => $amount,
+            'fromAccount' => $input['fromAccount'],
+            'fromBankCode' => $input['fromBankCode'],
+            'fullName' => $input['fullName'],
+            'fullNameEn' => $input['fullNameEn'] ?? null,
+            'returnUrl' => $input['returnUrl'] ?? null,
+            'detail' => $merchantOrderNo,
+        ]);
+        $this->assertUpstreamAccepted($upstream);
+
+        $data = is_array($upstream['data'] ?? null) ? $upstream['data'] : [];
         $order = PaymentOrder::query()->create([
             'merchant_id' => $merchant->id,
             'type' => PaymentOrder::TYPE_DEPOSIT,
-            'merchant_order_no' => (string) $input['merchantOrderNo'],
+            'merchant_order_no' => $merchantOrderNo,
             'amount' => $amount,
-            'status' => PaymentOrder::STATUS_PROCESSING,
+            'amount_fee' => $fee,
+            'status' => PaymentOrder::STATUS_PENDING,
             'callback_url' => $callbackUrl,
             'return_url' => $input['returnUrl'] ?? null,
-            'request_payload' => $this->requestSnapshot($input),
-        ]);
-
-        try {
-            $upstream = $this->client->createDeposit([
-                'amount' => $amount,
-                'fromAccount' => $input['fromAccount'],
-                'fromBankCode' => $input['fromBankCode'],
-                'fullName' => $input['fullName'],
-                'fullNameEn' => $input['fullNameEn'] ?? null,
-                'returnUrl' => $input['returnUrl'] ?? null,
-                'detail' => $order->merchant_order_no,
-            ]);
-        } catch (JinlipayException $exception) {
-            $order->forceFill([
-                'status' => PaymentOrder::STATUS_FAILED,
-                'upstream_response' => ['code' => $exception->upstreamCode, 'message' => $exception->getMessage(), 'data' => $exception->data],
-            ])->save();
-            throw $exception;
-        }
-
-        $data = is_array($upstream['data'] ?? null) ? $upstream['data'] : [];
-        $order->forceFill([
-            'status' => PaymentOrder::STATUS_PENDING,
+            'request_payload' => $input,
+            'upstream_response' => $upstream,
             'upstream_ref' => $data['ref'] ?? null,
             'upload_url' => $data['uploadUrl'] ?? null,
             'upload_token' => $data['uploadToken'] ?? null,
-            'upstream_response' => $upstream,
-        ])->save();
+        ]);
+        $this->apiLogs->record(PaymentApiLog::DIRECTION_MERCHANT_REQUEST, $order, PaymentOrder::TYPE_DEPOSIT, $input);
+        $this->client->attachLastUpstreamLog($order);
 
         return [
             'merchantOrderNo' => $order->merchant_order_no,
@@ -100,10 +98,9 @@ class MerchantPaymentService
             throw new RuntimeException('ORDER_FINAL');
         }
 
-        $upstream = $this->client->cancelDeposit($order->upstream_ref);
+        $this->client->cancelDeposit($order->upstream_ref, $order);
         $order->forceFill([
             'status' => PaymentOrder::STATUS_CANCELLED,
-            'upstream_response' => $upstream,
         ])->save();
 
         $this->notifier->notify($order->fresh());
@@ -124,57 +121,49 @@ class MerchantPaymentService
         $this->assertMerchantActive($merchant);
         $callbackUrl = $this->resolveCallbackUrl($merchant, $input['callbackUrl'] ?? null);
         $amount = $this->client->canonicalAmount($input['amount']);
+        $fee = $this->percentFee($amount, $merchant->withdraw_fee);
+        $lock = bcadd($this->money($amount), $fee, 4);
+        $merchantOrderNo = (string) $input['merchantOrderNo'];
+        $this->assertOrderAvailable($merchant, $merchantOrderNo);
+        $this->assertSufficientBalance($merchant, $lock);
 
-        $order = DB::transaction(function () use ($merchant, $input, $amount, $callbackUrl): PaymentOrder {
+        $upstream = $this->client->createWithdraw([
+            'amount' => $amount,
+            'toAccount' => $input['toAccount'],
+            'toBankCode' => $input['toBankCode'],
+            'toAccountName' => $input['toAccountName'],
+            'toAccountNameEn' => $input['toAccountNameEn'] ?? null,
+            'detail' => $merchantOrderNo,
+        ]);
+        $this->assertUpstreamAccepted($upstream);
+
+        $data = is_array($upstream['data'] ?? null) ? $upstream['data'] : [];
+        $order = DB::transaction(function () use ($merchant, $input, $upstream, $amount, $fee, $lock, $callbackUrl, $merchantOrderNo, $data): PaymentOrder {
             $credit = MerchantCredit::query()->where('merchant_id', $merchant->id)->lockForUpdate()->first();
-            if (! $credit || (float) $credit->credit_balance < (float) $amount) {
+            if (! $credit || bccomp($this->money($credit->credit_balance), $lock, 4) === -1) {
                 throw new RuntimeException('INSUFFICIENT_BALANCE');
             }
 
             $order = PaymentOrder::query()->create([
                 'merchant_id' => $merchant->id,
                 'type' => PaymentOrder::TYPE_WITHDRAW,
-                'merchant_order_no' => (string) $input['merchantOrderNo'],
+                'merchant_order_no' => $merchantOrderNo,
                 'amount' => $amount,
-                'status' => PaymentOrder::STATUS_PROCESSING,
+                'amount_fee' => $fee,
+                'status' => PaymentOrder::STATUS_PENDING,
                 'callback_url' => $callbackUrl,
-                'credit_locked' => $amount,
+                'request_payload' => $input,
+                'upstream_response' => $upstream,
+                'credit_locked' => $lock,
                 'remaining_amount' => $amount,
-                'request_payload' => $this->requestSnapshot($input),
+                'upstream_ref' => $data['ref'] ?? null,
             ]);
-
-            $this->credit->adjust($credit->id, 'decrease', (float) $amount, 'withdraw lock '.$order->merchant_order_no);
+            $this->apiLogs->record(PaymentApiLog::DIRECTION_MERCHANT_REQUEST, $order, PaymentOrder::TYPE_WITHDRAW, $input);
+            $this->credit->adjust($credit->id, 'decrease', (float) $lock, 'withdraw lock '.$order->merchant_order_no);
 
             return $order;
         });
-
-        try {
-            $upstream = $this->client->createWithdraw([
-                'amount' => $amount,
-                'toAccount' => $input['toAccount'],
-                'toBankCode' => $input['toBankCode'],
-                'toAccountName' => $input['toAccountName'],
-                'toAccountNameEn' => $input['toAccountNameEn'] ?? null,
-                'detail' => $order->merchant_order_no,
-            ]);
-        } catch (JinlipayException $exception) {
-            $this->releaseWithdraw($order, (float) $amount, 'withdraw failed '.$order->merchant_order_no);
-            $order->forceFill([
-                'status' => PaymentOrder::STATUS_FAILED,
-                'credit_released' => $amount,
-                'remaining_amount' => 0,
-                'upstream_response' => ['code' => $exception->upstreamCode, 'message' => $exception->getMessage(), 'data' => $exception->data],
-            ])->save();
-            $this->notifier->notify($order->fresh());
-            throw $exception;
-        }
-
-        $data = is_array($upstream['data'] ?? null) ? $upstream['data'] : [];
-        $order->forceFill([
-            'status' => PaymentOrder::STATUS_PENDING,
-            'upstream_ref' => $data['ref'] ?? null,
-            'upstream_response' => $upstream,
-        ])->save();
+        $this->client->attachLastUpstreamLog($order);
 
         return [
             'merchantOrderNo' => $order->merchant_order_no,
@@ -211,31 +200,37 @@ class MerchantPaymentService
             ->first();
 
         if (! $order || $ref === '' || $status === '') {
+            $this->apiLogs->record(PaymentApiLog::DIRECTION_UPSTREAM_CALLBACK, $order, PaymentOrder::TYPE_DEPOSIT, $payload, null, null, 'ORDER_NOT_FOUND');
             throw new RuntimeException('ORDER_NOT_FOUND');
         }
 
-        if ($order->isFinal() && ! ($order->status === PaymentOrder::STATUS_COMPLETE && (float) $order->credit_applied <= 0)) {
+        $this->apiLogs->record(PaymentApiLog::DIRECTION_UPSTREAM_CALLBACK, $order, PaymentOrder::TYPE_DEPOSIT, $payload);
+
+        if ($order->isFinal() && $this->depositSettlementDone($order)) {
             return;
         }
 
         DB::transaction(function () use ($order, $payload, $status): void {
             $locked = PaymentOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->isFinal() && ! ($locked->status === PaymentOrder::STATUS_COMPLETE && (float) $locked->credit_applied <= 0)) {
+            if ($locked->isFinal() && $this->depositSettlementDone($locked)) {
                 return;
             }
 
-            $locked->callback_payload = $payload;
+            $needsCredit = (float) $locked->credit_applied <= 0 && (float) $locked->completed_amount <= 0;
             $locked->status = $status;
 
-            if ($status === PaymentOrder::STATUS_COMPLETE && (float) $locked->credit_applied <= 0) {
-                $amount = (float) $this->client->canonicalAmount($payload['amount'] ?? $locked->amount);
+            if ($status === PaymentOrder::STATUS_COMPLETE && $needsCredit) {
+                $gross = $this->money($this->client->canonicalAmount($payload['amount'] ?? $locked->amount));
+                $fee = $this->proportionalFee($this->money($locked->amount), $this->money($locked->amount_fee), $gross);
+                $net = bcsub($gross, $fee, 4);
                 $credit = MerchantCredit::query()->where('merchant_id', $locked->merchant_id)->first();
-                if ($credit) {
-                    $this->credit->adjust($credit->id, 'increase', $amount, 'deposit complete '.$locked->upstream_ref);
+                if ($credit && bccomp($net, '0', 4) === 1) {
+                    $this->credit->adjust($credit->id, 'increase', (float) $net, 'deposit complete '.$locked->upstream_ref);
                 }
-                $locked->credit_applied = $amount;
-                $locked->completed_amount = $amount;
+                $locked->amount_fee = $fee;
+                $locked->credit_applied = $net;
+                $locked->completed_amount = $gross;
                 $locked->remaining_amount = 0;
             }
 
@@ -260,8 +255,11 @@ class MerchantPaymentService
             ->first();
 
         if (! $order || $ref === '' || $status === '') {
+            $this->apiLogs->record(PaymentApiLog::DIRECTION_UPSTREAM_CALLBACK, $order, PaymentOrder::TYPE_WITHDRAW, $payload, null, null, 'ORDER_NOT_FOUND');
             throw new RuntimeException('ORDER_NOT_FOUND');
         }
+
+        $this->apiLogs->record(PaymentApiLog::DIRECTION_UPSTREAM_CALLBACK, $order, PaymentOrder::TYPE_WITHDRAW, $payload);
 
         if ($order->isFinal()) {
             return;
@@ -271,21 +269,20 @@ class MerchantPaymentService
             return;
         }
 
-        DB::transaction(function () use ($order, $payload, $status, $ts): void {
+        $applied = DB::transaction(function () use ($order, $payload, $status, $ts): bool {
             $locked = PaymentOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->isFinal()) {
-                return;
+                return false;
             }
 
             if ($locked->callback_ts !== null && $ts > 0 && $ts < (int) $locked->callback_ts) {
-                return;
+                return false;
             }
 
             $completed = (float) ($payload['completedAmount'] ?? $locked->completed_amount);
             $remaining = (float) ($payload['remainingAmount'] ?? $locked->remaining_amount);
 
-            $locked->callback_payload = $payload;
             $locked->completed_amount = $completed;
             $locked->remaining_amount = $remaining;
             $locked->status = $status;
@@ -295,21 +292,28 @@ class MerchantPaymentService
 
             $finals = PaymentOrder::WITHDRAW_FINAL;
             if (in_array($status, $finals, true)) {
-                $shouldRemainLocked = $completed;
-                $alreadyKept = (float) $locked->credit_locked - (float) $locked->credit_released;
-                $release = round($alreadyKept - $shouldRemainLocked, 4);
-                if ($release > 0) {
-                    $this->releaseWithdraw($locked, $release, 'withdraw settle '.$locked->upstream_ref);
-                    $locked->credit_released = round((float) $locked->credit_released + $release, 4);
+                $completedMoney = $this->money($completed);
+                $settledFee = $this->proportionalFee($this->money($locked->amount), $this->money($locked->amount_fee), $completedMoney);
+                $shouldRemainLocked = bcadd($completedMoney, $settledFee, 4);
+                $alreadyKept = bcsub($this->money($locked->credit_locked), $this->money($locked->credit_released), 4);
+                $release = bcsub($alreadyKept, $shouldRemainLocked, 4);
+                if (bccomp($release, '0', 4) === 1) {
+                    $this->releaseWithdraw($locked, (float) $release, 'withdraw settle '.$locked->upstream_ref);
+                    $locked->credit_released = bcadd($this->money($locked->credit_released), $release, 4);
                 }
+                $locked->amount_fee = $settledFee;
             }
 
             $locked->save();
+
+            return true;
         });
 
-        $fresh = $order->fresh();
-        if ($fresh && $fresh->isFinal()) {
-            $this->notifier->notify($fresh);
+        if ($applied) {
+            $fresh = $order->fresh();
+            if ($fresh) {
+                $this->notifier->notify($fresh);
+            }
         }
     }
 
@@ -325,6 +329,41 @@ class MerchantPaymentService
         }
 
         $this->credit->adjust($credit->id, 'increase', $amount, $note);
+    }
+
+    private function assertOrderAvailable(Merchant $merchant, string $merchantOrderNo): void
+    {
+        $exists = PaymentOrder::query()
+            ->where('merchant_id', $merchant->id)
+            ->where('merchant_order_no', $merchantOrderNo)
+            ->exists();
+
+        if ($exists) {
+            throw new RuntimeException('ORDER_EXISTS');
+        }
+    }
+
+    private function assertSufficientBalance(Merchant $merchant, string $lock): void
+    {
+        $credit = MerchantCredit::query()->where('merchant_id', $merchant->id)->first();
+        if (! $credit || bccomp($this->money($credit->credit_balance), $lock, 4) === -1) {
+            throw new RuntimeException('INSUFFICIENT_BALANCE');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $upstream
+     */
+    private function assertUpstreamAccepted(array $upstream): void
+    {
+        $code = (string) ($upstream['code'] ?? '');
+        $message = (string) ($upstream['message'] ?? '');
+        if ($code === '0000') {
+            return;
+        }
+
+        $data = is_array($upstream['data'] ?? null) ? $upstream['data'] : [];
+        throw new JinlipayException($code !== '' ? $code : '0001', $message !== '' ? $message : 'Upstream request failed.', $data);
     }
 
     private function assertMerchantActive(Merchant $merchant): void
@@ -344,14 +383,49 @@ class MerchantPaymentService
         return $url;
     }
 
-    /**
-     * @param  array<string, mixed>  $input
-     * @return array<string, mixed>
-     */
-    private function requestSnapshot(array $input): array
+    private function depositSettlementDone(PaymentOrder $order): bool
     {
-        unset($input['sign'], $input['merchant_serial']);
+        if ($order->status !== PaymentOrder::STATUS_COMPLETE) {
+            return true;
+        }
 
-        return $input;
+        return (float) $order->credit_applied > 0 || (float) $order->completed_amount > 0;
+    }
+
+    private function percentFee(mixed $amount, mixed $percent): string
+    {
+        $base = $this->money($amount);
+        $rate = $this->money($percent);
+        if (bccomp($base, '0', 4) !== 1 || bccomp($rate, '0', 4) !== 1) {
+            return '0.0000';
+        }
+
+        $fee = bcadd(bcdiv(bcmul($base, $rate, 8), '100', 8), '0.00005', 4);
+
+        return bccomp($fee, $base, 4) === 1 ? $base : $fee;
+    }
+
+    private function proportionalFee(string $orderAmount, string $orderFee, string $portion): string
+    {
+        if (bccomp($orderAmount, '0', 4) !== 1 || bccomp($orderFee, '0', 4) !== 1 || bccomp($portion, '0', 4) !== 1) {
+            return '0.0000';
+        }
+
+        if (bccomp($portion, $orderAmount, 4) >= 0) {
+            return bccomp($orderFee, $portion, 4) === 1 ? $portion : $orderFee;
+        }
+
+        $fee = bcadd(bcdiv(bcmul($orderFee, $portion, 8), $orderAmount, 8), '0.00005', 4);
+
+        return bccomp($fee, $portion, 4) === 1 ? $portion : $fee;
+    }
+
+    private function money(mixed $value): string
+    {
+        if (! is_numeric($value)) {
+            return '0.0000';
+        }
+
+        return bcadd((string) $value, '0', 4);
     }
 }

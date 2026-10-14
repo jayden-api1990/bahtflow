@@ -17,6 +17,14 @@ class Merchant extends Model
 
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return [
+            'deposit_fee' => 'decimal:4',
+            'withdraw_fee' => 'decimal:4',
+        ];
+    }
+
     public function adminUsers(): HasMany
     {
         return $this->hasMany(AdminUser::class, 'merchant_id');

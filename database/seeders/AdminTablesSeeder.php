@@ -410,7 +410,7 @@ class AdminTablesSeeder extends Seeder
                     "id" => 7,
                     "group_name" => "layout_config",
                     "slug" => "show_locale_switch",
-                    "value" => "",
+                    "value" => "1",
                     "created_at" => "2026-09-29 17:19:15",
                     "updated_at" => "2026-09-29 17:19:15"
                 ],

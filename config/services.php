@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'http_client' => [
+        'proxy' => (string) env('HTTP_PROXY', '172.31.1.8:3128'),
+    ],
+
 ];

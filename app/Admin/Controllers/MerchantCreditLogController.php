@@ -23,18 +23,19 @@ class MerchantCreditLogController extends AdminController
             $this->applyMerchantScope($grid->model());
             $grid->model()->with(['merchant', 'adminUser'])->orderByDesc('id');
 
-            $grid->column('id')->sortable();
-            $grid->column('merchant.name', admin_trans_field('merchant_id'));
+            //$grid->column('id')->sortable();
+            $grid->column('created_at')->display(fn ($value) => self::formatDateTime($value))->sortable();
+            if($isAdministratorUser) 
+                $grid->column('merchant.name', admin_trans_field('merchant_id'));
             $grid->column('type')->using(__('merchant-credit-log.options.type'))->label([
                 'increase' => 'success',
                 'decrease' => 'danger',
             ]);
-            $grid->column('amount');
             $grid->column('balance_before');
+            $grid->column('amount');
             $grid->column('balance_after');
+            $grid->column('note')->limit(50);
             $grid->column('adminUser.name', admin_trans_field('admin_user_id'));
-            $grid->column('note')->limit(30);
-            $grid->column('created_at')->display(fn ($value) => self::formatDateTime($value))->sortable();
 
             $grid->disableCreateButton();
             $grid->disableActions();

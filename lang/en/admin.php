@@ -66,6 +66,7 @@ return [
     'password_confirmation' => 'Password confirmation',
     'old_password_error'    => 'Incorrect password',
     'remember_me'           => 'Remember me',
+    'locale'                => 'Language',
     'user_setting'          => 'User setting',
     'avatar'                => 'Avatar',
     'list'                  => 'List',

@@ -5,6 +5,7 @@ namespace App\Models;
 use Dcat\Admin\Traits\HasDateTimeFormatter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PaymentOrder extends Model
 {
@@ -57,6 +58,7 @@ class PaymentOrder extends Model
     {
         return [
             'amount' => 'decimal:4',
+            'amount_fee' => 'decimal:4',
             'credit_locked' => 'decimal:4',
             'credit_released' => 'decimal:4',
             'credit_applied' => 'decimal:4',
@@ -64,7 +66,6 @@ class PaymentOrder extends Model
             'remaining_amount' => 'decimal:4',
             'request_payload' => 'array',
             'upstream_response' => 'array',
-            'callback_payload' => 'array',
             'merchant_notified_at' => 'datetime',
         ];
     }
@@ -72,6 +73,11 @@ class PaymentOrder extends Model
     public function merchant(): BelongsTo
     {
         return $this->belongsTo(Merchant::class, 'merchant_id');
+    }
+
+    public function apiLogs(): HasMany
+    {
+        return $this->hasMany(PaymentApiLog::class, 'payment_order_id');
     }
 
     public function isFinal(): bool

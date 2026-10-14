@@ -75,6 +75,13 @@ class MerchantPaymentController extends Controller
                 ],
             ], 400);
         } catch (RuntimeException $exception) {
+            if ($exception->getMessage() === 'ORDER_EXISTS') {
+                return response()->json([
+                    'respCode' => '0002',
+                    'respMsg' => 'merchantOrderNo already exists.',
+                ], 422);
+            }
+
             $message = match ($exception->getMessage()) {
                 'INSUFFICIENT_BALANCE' => 'Insufficient merchant credit.',
                 'ORDER_NOT_FOUND' => 'Order not found.',

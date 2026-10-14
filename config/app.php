@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'Asia/Shanghai'),
+    'timezone' => env('APP_TIMEZONE', 'Asia/Bangkok'),
 
     'api_domain' => env('API_DOMAIN'),
 

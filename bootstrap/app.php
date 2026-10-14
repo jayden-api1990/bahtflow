@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\VerifyMerchantIp;
+use App\Http\Middleware\VerifyMerchantSign;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,10 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         },
     )
+    ->withCommands()
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'merchant.sign' => \App\Http\Middleware\VerifyMerchantSign::class,
-            'merchant.ip' => \App\Http\Middleware\VerifyMerchantIp::class,
+            'merchant.sign' => VerifyMerchantSign::class,
+            'merchant.ip' => VerifyMerchantIp::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

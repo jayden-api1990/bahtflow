@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'labels' => [
+        'MemberUser' => 'Members',
+        'member-user' => 'Members',
+    ],
+    'fields' => [
+        'username' => 'Username',
+        'phone' => 'Phone',
+        'email' => 'Email',
+        'password' => 'Password',
+        'lastLoginTime' => 'Last Login Time',
+        'lastLoginIp' => 'Last Login IP',
+        'phoneVerified' => 'Phone Verified',
+        'emailVerified' => 'Email Verified',
+        'avatar' => 'Avatar (Small)',
+        'avatarMedium' => 'Avatar (Medium)',
+        'avatarBig' => 'Avatar (Large)',
+        'gender' => 'Gender',
+        'realname' => 'Real Name',
+        'signature' => 'Signature',
+        'vipId' => 'VIP Card ID',
+        'vipExpire' => 'VIP Expiry',
+        'nickname' => 'Nickname',
+        'status' => 'Status',
+        'groupId' => 'Group ID',
+        'deleteAtTime' => 'Deleted At',
+        'isDeleted' => 'Deleted',
+        'messageCount' => 'Unread Messages',
+        'registerIp' => 'Register IP',
+        'balance' => 'Balance',
+        'freeze_price' => 'Frozen Balance',
+        'points' => 'Points',
+        'parent_id' => 'Parent ID',
+        'temp_parent_id' => 'Temporary Parent',
+        'junior_at' => 'Became Junior At',
+    ],
+    'options' => [
+    ],
+];
