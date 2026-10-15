@@ -1,0 +1,38 @@
+<?php
+
+return [
+    'select'      => 'เลือก',
+    'check_image' => 'เลือกรูปภาพ',
+    'upload'      => 'อัปโหลด',
+    'change_sort' => 'เปลี่ยนลำดับ',
+    'create'      => 'สร้าง',
+    'close'       => 'ปิด',
+    'save'        => 'บันทึก',
+    'prev'        => 'ก่อนหน้า',
+    'next'        => 'ถัดไป',
+
+    'get_success'           => 'ดึงข้อมูลสำเร็จ',
+    'upload_file_ext_error' => 'นามสกุลไฟล์อัปโหลดไม่ถูกต้อง',
+    'upload_success'        => 'อัปโหลดสำเร็จ',
+    'upload_error'          => 'อัปโหลดล้มเหลว',
+    'create_success'        => 'สร้างสำเร็จ',
+    'create_error'          => 'สร้างล้มเหลว',
+    'create_dirname_empty'  => 'ชื่อโฟลเดอร์ต้องไม่ว่าง',
+
+    'js_empty'            => 'ว่างเปล่า',
+    'js_system_tip'       => 'ข้อความระบบ',
+    'js_remove_tip'       => 'คุณจะลบข้อมูล [:data] หรือไม่？',
+    'js_select_type'      => 'กรุณาเลือก :title',
+    'js_page_render'      => ':page / :total，:perpage หน้า',
+    'js_dir_not_empty'    => 'ชื่อโฟลเดอร์ต้องไม่ว่าง',
+    'js_create_dir_error' => 'สร้างโฟลเดอร์ล้มเหลว',
+    'js_upload_error'     => 'อัปโหลดล้มเหลว',
+    'js_selected_error'   => 'ข้อมูลที่เลือกต้องไม่เกิน :num',
+    'js_getdata_error'    => 'ดึงข้อมูลล้มเหลว',
+    'js_preview_title'    => 'ดูตัวอย่าง',
+    'js_preview'          => 'ดูตัวอย่าง',
+    'js_remove'           => 'ลบ',
+    'js_dragsort'         => 'ลากเรียง',
+    'js_copy_success'     => 'คัดลอกสำเร็จ',
+    'js_copy_error'       => 'คัดลอกล้มเหลว',
+];

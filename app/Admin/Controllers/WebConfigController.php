@@ -56,7 +56,8 @@ class WebConfigController extends Controller {
             ->options([
                 'zh_CN' => '中文（简体）',
                 'zh_TW' => '中文（繁体）',
-                'en' => 'English'
+                'en' => 'English',
+                'th' => 'ภาษาไทย',
             ])
             ->default(admin_setting('site_lang'));
 

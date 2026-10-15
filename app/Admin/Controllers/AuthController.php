@@ -13,7 +13,7 @@ class AuthController extends BaseAuthController
     /**
      * @var list<string>
      */
-    protected array $allowedLocales = ['zh_CN', 'en'];
+    protected array $allowedLocales = ['zh_CN', 'zh_TW', 'en', 'th'];
 
     public function switchLocale(Request $request): RedirectResponse
     {

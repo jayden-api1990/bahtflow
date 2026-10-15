@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'labels' => [
+        'MemberUser' => 'สมาชิก',
+        'member-user' => 'สมาชิก',
+    ],
+    'fields' => [
+        'username' => 'ชื่อผู้ใช้',
+        'phone' => 'โทรศัพท์',
+        'email' => 'อีเมล',
+        'password' => 'รหัสผ่าน',
+        'lastLoginTime' => 'เข้าสู่ระบบล่าสุด',
+        'lastLoginIp' => 'IP เข้าสู่ระบบล่าสุด',
+        'phoneVerified' => 'ยืนยันโทรศัพท์แล้ว',
+        'emailVerified' => 'ยืนยันอีเมลแล้ว',
+        'avatar' => 'รูปโปรไฟล์ (เล็ก)',
+        'avatarMedium' => 'รูปโปรไฟล์ (กลาง)',
+        'avatarBig' => 'รูปโปรไฟล์ (ใหญ่)',
+        'gender' => 'เพศ',
+        'realname' => 'ชื่อจริง',
+        'signature' => 'ลายเซ็น',
+        'vipId' => 'รหัสบัตร VIP',
+        'vipExpire' => 'VIP หมดอายุ',
+        'nickname' => 'ชื่อเล่น',
+        'status' => 'สถานะ',
+        'groupId' => 'รหัสกลุ่ม',
+        'deleteAtTime' => 'ลบเมื่อ',
+        'isDeleted' => 'ถูกลบ',
+        'messageCount' => 'ข้อความที่ยังไม่อ่าน',
+        'registerIp' => 'IP ลงทะเบียน',
+        'balance' => 'ยอดคงเหลือ',
+        'freeze_price' => 'ยอดที่แช่แข็ง',
+        'points' => 'คะแนน',
+        'parent_id' => 'รหัสผู้แนะนำ',
+        'temp_parent_id' => 'ผู้แนะนำชั่วคราว',
+        'junior_at' => 'เป็นลูกข่ายเมื่อ',
+    ],
+    'options' => [
+    ],
+];

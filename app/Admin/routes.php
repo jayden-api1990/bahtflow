@@ -1,5 +1,6 @@
 <?php
 
+use App\Admin\Controllers\LayoutConfigController;
 use Dcat\Admin\Admin;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,8 @@ Route::group([
     'namespace' => config('admin.route.namespace'),
     'middleware' => config('admin.route.middleware'),
 ], function (Router $router) {
+    // Override package route so Thai locale is accepted.
+    $router->post('layout-config/save', [LayoutConfigController::class, 'save']);
 
     $router->get('auth/locale', 'AuthController@switchLocale');
     $router->get('/', 'HomeController@index');

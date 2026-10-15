@@ -30,7 +30,9 @@
     $currentLocale = app()->getLocale();
     $locales = [
         'zh_CN' => '中文',
+        'zh_TW' => '繁體中文',
         'en' => 'English',
+        'th' => 'ภาษาไทย',
     ];
 @endphp
 

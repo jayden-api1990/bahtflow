@@ -24,7 +24,7 @@ use Dcat\Admin\Show;
  * Admin::css('/packages/prettydocs/css/styles.css');
  * Admin::js('/packages/prettydocs/js/main.js');
  */
-$allowedLocales = ['zh_CN', 'en', 'zh_TW'];
+$allowedLocales = ['zh_CN', 'zh_TW', 'en', 'th'];
 try {
     $layoutLocale = admin_setting_group('layout_config')['locale'] ?? null;
     if (is_string($layoutLocale) && in_array($layoutLocale, $allowedLocales, true)) {
@@ -37,6 +37,14 @@ try {
 Admin::style('.main-footer { display: none !important; }');
 Admin::style('.dark-mode-switcher { display: none !important; }');
 Admin::style('.lc-clear-cache-btn { display: none !important; }');
+Admin::style(<<<'CSS'
+.flag-icon { background-size: contain; background-position: 50%; background-repeat: no-repeat; position: relative; display: inline-block; width: 1.333333em; line-height: 1em; }
+.flag-icon:before { content: "\00a0"; }
+.flag-icon-th { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 600'%3E%3Crect fill='%23A51931' width='900' height='600'/%3E%3Crect fill='%23F4F5F8' y='100' width='900' height='400'/%3E%3Crect fill='%232D2A4A' y='200' width='900' height='200'/%3E%3C/svg%3E"); }
+.flag-icon-cn { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'%3E%3Crect fill='%23de2910' width='30' height='20'/%3E%3C/svg%3E"); }
+.flag-icon-us { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'%3E%3Crect fill='%23b22234' width='30' height='20'/%3E%3C/svg%3E"); }
+.flag-icon-tw { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'%3E%3Crect fill='%23fe0000' width='30' height='20'/%3E%3Crect fill='%23000fe0' width='15' height='10'/%3E%3C/svg%3E"); }
+CSS);
 
 Admin::style(<<<'CSS'
 table.data-table tbody td,
