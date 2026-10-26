@@ -56,8 +56,9 @@ CSS);
 // 可以把注释去掉,自定义全局的 Grid、Show 和 Form 逻辑
 // // 统一全局定义数据表格
 Grid::resolving(function (Grid $grid) {
+    $grid->scrollbarX();
     $grid->disableRowSelector();
-    $grid->tableCollapse(false); // 表格布局样式
+    $grid->tableCollapse(true); // 表格布局样式
     $grid->filter(function (Filter $filter) {
         $filter->panel();  // 更改为 panel 布局
         $filter->expand(false); // 展开过滤器
